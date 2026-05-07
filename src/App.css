@@ -14,10 +14,18 @@ button {
   cursor: pointer;
 }
 
+select {
+  padding: 8px;
+  margin: 8px;
+}
+
 .sportlane {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 16px;
-  margin: 10px;
+  gap: 24px;
+  margin: 12px auto;
+  padding: 12px;
+  border: 1px solid lightgray;
+  width: 400px;
 }
