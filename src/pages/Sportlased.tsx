@@ -13,6 +13,9 @@ function Sportlased() {
   const [totalPages, setTotalPages] = useState(0);
   const [teade, setTeade] = useState("");
 
+  const [spordialad, setSpordialad] = useState<{ [key: number]: string }>({});
+  const [tulemused, setTulemused] = useState<{ [key: number]: string }>({});
+
   const laeSportlased = () => {
     let url = import.meta.env.VITE_BACK_URL +
       "/sportlased?page=" + page +
@@ -84,6 +87,53 @@ function Sportlased() {
       });
   };
 
+  const lisaTulemus = (id: number | undefined) => {
+    if (id === undefined) {
+      return;
+    }
+
+    const spordiala = spordialad[id];
+    const tulemus = tulemused[id];
+
+    if (spordiala === undefined || spordiala.trim() === "") {
+      setTeade("Spordiala on kohustuslik");
+      return;
+    }
+
+    if (tulemus === undefined || tulemus.trim() === "") {
+      setTeade("Tulemus on kohustuslik");
+      return;
+    }
+
+    const uusTulemus = {
+      spordiala: spordiala,
+      tulemus: Number(tulemus)
+    };
+
+    fetch(import.meta.env.VITE_BACK_URL + "/sportlased/" + id + "/tulemus", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(uusTulemus)
+    })
+      .then(res => res.json())
+      .then(() => {
+        setTeade("Tulemus lisatud");
+        setSpordialad({ ...spordialad, [id]: "" });
+        setTulemused({ ...tulemused, [id]: "" });
+        laeSportlased();
+      });
+  };
+
+  const arvutaKogupunktid = (sportlane: Sportlane) => {
+    if (sportlane.tulemused === undefined || sportlane.tulemused === null) {
+      return 0;
+    }
+
+    return sportlane.tulemused.reduce((summa, tulemus) => summa + tulemus.punktid, 0);
+  };
+
   const filtreeriRiigiJargi = () => {
     setPage(0);
     setAktiivneRiik(riik);
@@ -148,13 +198,54 @@ function Sportlased() {
       {sportlased.map(sportlane =>
         <div key={sportlane.id} className="sportlane">
           <div>
-            <div>{sportlane.nimi}</div>
-            <div>{sportlane.riik}</div>
-            <div>Kogupunktid: {sportlane.tulemused?.reduce((summa, tulemus) => summa + tulemus.punktid, 0) || 0}</div>
+            <h3>{sportlane.nimi}</h3>
+            <div>Riik: {sportlane.riik}</div>
+            <div>Kogupunktid: {arvutaKogupunktid(sportlane)}</div>
+
+            <h4>Tulemused</h4>
+
+            {sportlane.tulemused === undefined || sportlane.tulemused === null || sportlane.tulemused.length === 0
+              ? <div>Tulemusi ei ole</div>
+              : sportlane.tulemused.map(tulemus =>
+                  <div key={tulemus.id}>
+                    {tulemus.spordiala}: {tulemus.tulemus} tulemus, {tulemus.punktid} punkti
+                  </div>
+                )
+            }
+
+            <div>
+              <select
+                value={sportlane.id === undefined ? "" : spordialad[sportlane.id] || ""}
+                onChange={(e) => {
+                  if (sportlane.id !== undefined) {
+                    setSpordialad({ ...spordialad, [sportlane.id]: e.target.value });
+                  }
+                }}
+              >
+                <option value="">Vali spordiala</option>
+                <option value="100m">100m</option>
+                <option value="kaugushüpe">Kaugushüpe</option>
+              </select>
+
+              <input
+                type="number"
+                value={sportlane.id === undefined ? "" : tulemused[sportlane.id] || ""}
+                onChange={(e) => {
+                  if (sportlane.id !== undefined) {
+                    setTulemused({ ...tulemused, [sportlane.id]: e.target.value });
+                  }
+                }}
+                placeholder="Tulemus"
+              />
+
+              <button onClick={() => lisaTulemus(sportlane.id)}>
+                Lisa tulemus
+              </button>
+            </div>
           </div>
 
           <button onClick={() => kustutaSportlane(sportlane.id)}>
-            Kustuta
+            Kustuta sportlane
           </button>
         </div>
       )}
